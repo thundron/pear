@@ -315,6 +315,7 @@ jobs:
           primary-key: ${{ secrets.PEAR_PRIMARY_KEY }}
           target: './out/pear-stage'
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          dry-run: 'true' # TEST: fork has no remote peer to sync with
 
   notify:
     needs:
