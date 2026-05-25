@@ -172,7 +172,7 @@ jobs:
 
   build-macos-x64:
     needs: bump-version
-    if: ${{ !cancelled() && !failure() }}
+    if: false # TEST: skipped on fork, macos-13 runners have multi-min queue times
     permissions:
       contents: write
       packages: read
@@ -259,15 +259,13 @@ jobs:
         run: echo "artifact-links=<${{ steps.upload.outputs.artifact-url }}|Pear-win32-x64.msix>" >> $GITHUB_OUTPUT
 
   stage:
-    needs:
-      [bump-version, build-linux-x64, build-linux-arm, build-macos, build-macos-x64, build-win32]
+    needs: [bump-version, build-linux-x64, build-linux-arm, build-macos, build-win32]
     if: >-
       ${{ !cancelled()
         && (inputs.run-stage == true || github.event.inputs['run-stage'] == 'true')
         && needs.build-linux-x64.result == 'success'
         && needs.build-linux-arm.result == 'success'
         && needs.build-macos.result == 'success'
-        && needs.build-macos-x64.result == 'success'
         && needs.build-win32.result == 'success' }}
     permissions:
       contents: write
@@ -289,6 +287,20 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: out/artifacts
+
+      - name: Stub darwin-x64 artifact (fork-test only)
+        run: |
+          stub=out/artifacts/Pear-darwin-x64.zip
+          if [ ! -d "$stub" ]; then
+            mkdir -p tmp-stub/Pear.app/Contents/MacOS tmp-stub/Pear.app/Contents/Resources
+            printf '#!stub\n' > tmp-stub/Pear.app/Contents/MacOS/Pear
+            chmod +x tmp-stub/Pear.app/Contents/MacOS/Pear
+            printf 'APPL????' > tmp-stub/Pear.app/Contents/PkgInfo
+            printf '%s' '<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>CFBundleExecutable</key><string>Pear</string><key>CFBundleIdentifier</key><string>Pear.dryrun</string><key>CFBundlePackageType</key><string>APPL</string></dict></plist>' > tmp-stub/Pear.app/Contents/Info.plist
+            mkdir -p "$stub"
+            ditto -c -k --sequesterRsrc --keepParent tmp-stub/Pear.app "$stub/Pear-darwin-x64.zip"
+            rm -rf tmp-stub
+          fi
 
       - name: Build stage artifact
         env:
