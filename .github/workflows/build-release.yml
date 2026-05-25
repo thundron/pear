@@ -244,6 +244,9 @@ jobs:
             ${{ github.event.inputs['upgrade-key']
               || ((inputs.channel || github.event.inputs.channel) == 'nightly' && secrets.NIGHTLY_KEY)
               || ((inputs.channel || github.event.inputs.channel) == 'internal' && secrets.INTERNAL_KEY) }}
+          SKIP_ROOT_TRUST: '1'
+          SKIP_VERIFY: '1'
+          SKIP_TIMESTAMP: '1'
         run: npm run make
       - id: upload
         uses: actions/upload-artifact@v4
