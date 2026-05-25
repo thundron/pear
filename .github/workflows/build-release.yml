@@ -128,88 +128,127 @@ jobs:
 
   build-macos:
     needs: bump-version
-    if: false # TEST: disabled, no Developer ID creds yet
+    if: ${{ !cancelled() && !failure() }}
     permissions:
       contents: write
       packages: read
     runs-on: macos-latest
     environment: release
     outputs:
-      artifact-links: ${{ steps.build.outputs.artifact-links }}
+      artifact-links: ${{ steps.link.outputs.artifact-links }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || needs.bump-version.outputs.sha || github.sha }}
-      - uses: holepunchto/actions/make-pear-app@v1
-        id: build
+      - uses: actions/setup-node@v4
         with:
-          channel: ${{ env.CHANNEL }}
-          upgrade_key: >-
+          node-version: 20
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@holepunchto'
+      - name: Install dependencies
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.HOLEPUNCH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+        run: npm install
+      - name: Build (unsigned, fork-test)
+        env:
+          NODE_ENV: production
+          CHANNEL: ${{ env.CHANNEL }}
+          UPGRADE_KEY: >-
             ${{ github.event.inputs['upgrade-key']
               || ((inputs.channel || github.event.inputs.channel) == 'nightly' && secrets.NIGHTLY_KEY)
               || ((inputs.channel || github.event.inputs.channel) == 'internal' && secrets.INTERNAL_KEY) }}
-          macos_certificate_base64: ${{ secrets.CERTIFICATE_P12 }}
-          macos_p12_password: ${{ secrets.CERTIFICATE_PASSWORD }}
-          macos_codesign_identity: ${{ secrets.MAC_CODESIGN_IDENTITY }}
-          macos_notarization_method: apple_id_password
-          macos_apple_id: ${{ secrets.APPLE_ID }}
-          macos_apple_password: ${{ secrets.APPLE_PASSWORD }}
-          macos_apple_team_id: ${{ secrets.APPLE_TEAM_ID }}
+        run: npm run make
+      - id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pear-darwin-arm64.zip
+          path: out/make/darwin-arm64/Pear-darwin-arm64.zip
+          if-no-files-found: error
+      - id: link
+        run: echo "artifact-links=<${{ steps.upload.outputs.artifact-url }}|Pear-darwin-arm64.zip>" >> $GITHUB_OUTPUT
 
   build-macos-x64:
     needs: bump-version
-    if: false # TEST: disabled, no Developer ID creds yet
+    if: ${{ !cancelled() && !failure() }}
     permissions:
       contents: write
       packages: read
-    runs-on: macos-26-intel
+    runs-on: macos-13
     environment: release
     outputs:
-      artifact-links: ${{ steps.build.outputs.artifact-links }}
+      artifact-links: ${{ steps.link.outputs.artifact-links }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || needs.bump-version.outputs.sha || github.sha }}
-      - uses: holepunchto/actions/make-pear-app@v1
-        id: build
+      - uses: actions/setup-node@v4
         with:
-          channel: ${{ env.CHANNEL }}
-          upgrade_key: >-
+          node-version: 20
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@holepunchto'
+      - name: Install dependencies
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.HOLEPUNCH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+        run: npm install
+      - name: Build (unsigned, fork-test)
+        env:
+          NODE_ENV: production
+          CHANNEL: ${{ env.CHANNEL }}
+          UPGRADE_KEY: >-
             ${{ github.event.inputs['upgrade-key']
               || ((inputs.channel || github.event.inputs.channel) == 'nightly' && secrets.NIGHTLY_KEY)
               || ((inputs.channel || github.event.inputs.channel) == 'internal' && secrets.INTERNAL_KEY) }}
-          macos_certificate_base64: ${{ secrets.CERTIFICATE_P12 }}
-          macos_p12_password: ${{ secrets.CERTIFICATE_PASSWORD }}
-          macos_codesign_identity: ${{ secrets.MAC_CODESIGN_IDENTITY }}
-          macos_notarization_method: apple_id_password
-          macos_apple_id: ${{ secrets.APPLE_ID }}
-          macos_apple_password: ${{ secrets.APPLE_PASSWORD }}
-          macos_apple_team_id: ${{ secrets.APPLE_TEAM_ID }}
+        run: npm run make
+      - id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pear-darwin-x64.zip
+          path: out/make/darwin-x64/Pear-darwin-x64.zip
+          if-no-files-found: error
+      - id: link
+        run: echo "artifact-links=<${{ steps.upload.outputs.artifact-url }}|Pear-darwin-x64.zip>" >> $GITHUB_OUTPUT
 
   build-win32:
     needs: bump-version
-    if: false # TEST: disabled, no Windows EV cert yet
+    if: ${{ !cancelled() && !failure() }}
     permissions:
       contents: write
       packages: read
-    runs-on: windows-signer
+    runs-on: windows-latest
     environment: release
     outputs:
-      artifact-links: ${{ steps.build.outputs.artifact-links }}
+      artifact-links: ${{ steps.link.outputs.artifact-links }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || needs.bump-version.outputs.sha || github.sha }}
-      - uses: holepunchto/actions/make-pear-app@v1
-        id: build
+      - uses: actions/setup-node@v4
         with:
-          channel: ${{ env.CHANNEL }}
-          upgrade_key: >-
+          node-version: 20
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@holepunchto'
+      - name: Install dependencies
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.HOLEPUNCH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+        run: npm install
+      - name: Build MSIX (self-signed, fork-test)
+        env:
+          NODE_ENV: production
+          CHANNEL: ${{ env.CHANNEL }}
+          UPGRADE_KEY: >-
             ${{ github.event.inputs['upgrade-key']
               || ((inputs.channel || github.event.inputs.channel) == 'nightly' && secrets.NIGHTLY_KEY)
               || ((inputs.channel || github.event.inputs.channel) == 'internal' && secrets.INTERNAL_KEY) }}
-          windows_signing_method: windows_cert_sha1
-          windows_cert_sha1: ${{ secrets.WINDOWS_CERT_SHA1 }}
+        run: npm run make
+      - id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pear-win32-x64.msix
+          path: out/make/win32-x64/Pear-win32-x64.msix
+          if-no-files-found: error
+      - id: link
+        shell: bash
+        run: echo "artifact-links=<${{ steps.upload.outputs.artifact-url }}|Pear-win32-x64.msix>" >> $GITHUB_OUTPUT
 
   stage:
     needs:
