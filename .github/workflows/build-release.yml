@@ -128,7 +128,7 @@ jobs:
 
   build-macos:
     needs: bump-version
-    if: ${{ !cancelled() && !failure() }}
+    if: false # TEST: disabled, no Developer ID creds yet
     permissions:
       contents: write
       packages: read
@@ -158,7 +158,7 @@ jobs:
 
   build-macos-x64:
     needs: bump-version
-    if: ${{ !cancelled() && !failure() }}
+    if: false # TEST: disabled, no Developer ID creds yet
     permissions:
       contents: write
       packages: read
@@ -188,7 +188,7 @@ jobs:
 
   build-win32:
     needs: bump-version
-    if: ${{ !cancelled() && !failure() }}
+    if: false # TEST: disabled, no Windows EV cert yet
     permissions:
       contents: write
       packages: read
